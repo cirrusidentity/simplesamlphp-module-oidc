@@ -67,7 +67,9 @@ class OAuth2AccessTokenController
         $headers = [
             'Access-Control-Allow-Origin' => $origin,
             'Access-Control-Allow-Methods' => 'GET, POST, OPTIONS',
-            'Access-Control-Allow-Headers' => 'Authorization',
+            // set X-Requested-With headers
+            // TODO: client will send headers in access-control-request-headers, maybe log which ones are not included
+            'Access-Control-Allow-Headers' => 'Authorization, X-Requested-With',
             'Access-Control-Allow-Credentials' => 'true',
         ];
 

@@ -139,7 +139,10 @@ class OpenIdConnectUserInfoController
         $headers = [
             'Access-Control-Allow-Origin' => $origin,
             'Access-Control-Allow-Methods' => 'GET, POST, OPTIONS',
-            'Access-Control-Allow-Headers' => 'Authorization',
+            // Some JS like swagger https://github.com/swagger-api/swagger-ui/commit/937c8f6208f3adf713b10a349a82a1b129bd0ffd
+            // set X-Requested-With headers
+            // TODO: client will send headers in access-control-request-headers, maybe log which ones are not included
+            'Access-Control-Allow-Headers' => 'Authorization, X-Requested-With',
             'Access-Control-Allow-Credentials' => 'true',
         ];
 
