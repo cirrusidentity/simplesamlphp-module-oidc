@@ -14,6 +14,7 @@
 
 namespace SimpleSAML\Module\oidc\Repositories;
 
+use CirrusIdentity\SSP\Utils\MetricLogger;
 use Exception;
 use League\OAuth2\Server\Exception\OAuthServerException;
 use League\OAuth2\Server\Repositories\ClientRepositoryInterface;
@@ -249,6 +250,14 @@ EOF
         $this->database->write(
             $sqlQuery,
             $params
+        );
+        MetricLogger::getInstance()->logMetric(
+            'oidc',
+            'manage',
+            [
+                'action' => 'edit',
+                'clientId' => $client->getIdentifier()
+            ]
         );
     }
 

@@ -25,6 +25,7 @@
         "guzzlehttp/guzzle": "^7.0",
         "laminas/laminas-diactoros": "^2.2.1",
         "laminas/laminas-httphandlerrunner": "^1.1.0",
+	"cirrusidentity/simplesamlphp-internal-utils": "~v2.0.19",
         "lcobucci/jwt": "^4.1",
         "league/oauth2-server": "^8.1.0",
         "nette/forms": "^2.4",
@@ -51,7 +52,9 @@
         },
         "sort-packages": true,
         "allow-plugins": {
-            "simplesamlphp/composer-module-installer": true
+            "simplesamlphp/composer-module-installer": true,
+            "dealerdirect/phpcodesniffer-composer-installer": false,
+            "phpstan/extension-installer": false
         }
     },
     "autoload": {
@@ -83,5 +86,11 @@
             "vendor/bin/phpunit --no-coverage",
             "vendor/bin/phpspec run "
         ]
-    }
+    },
+        "repositories": {
+                "simplesaml-internal-utils": {
+            "type": "vcs",
+            "url": "git@bitbucket.org:cirrusidentity/simplesaml-internal-utils.git"
+        }
+}
 }
