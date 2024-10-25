@@ -2,6 +2,7 @@
 
 namespace SimpleSAML\Module\oidc\Server;
 
+use CirrusIdentity\SSP\Utils\MetricLogger;
 use Lcobucci\JWT\UnencryptedToken;
 use League\OAuth2\Server\AuthorizationServer as OAuth2AuthorizationServer;
 use LogicException;
@@ -75,6 +76,19 @@ class AuthorizationServer extends OAuth2AuthorizationServer
             $resultBag = $this->requestRulesManager->check($request, $rulesToExecute);
         } catch (OidcServerException $exception) {
             $reason = sprintf("%s %s", $exception->getMessage(), $exception->getHint() ?? '');
+            MetricLogger::getInstance()->logMetric(
+                'oidc',
+                'error',
+                [
+                    'message' => $reason,
+                    'oidc' => [
+                            'endpoint' => 'authorize',
+                        ]
+                        // authorize endpoint doesn't contain secrets so okay to log all params
+                        + $request->getQueryParams()
+
+                ]
+            );
             throw new BadRequest($reason);
         }
 
