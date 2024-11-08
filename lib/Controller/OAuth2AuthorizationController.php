@@ -14,9 +14,11 @@
 
 namespace SimpleSAML\Module\oidc\Controller;
 
+use CirrusIdentity\SSP\Utils\MetricLogger;
 use Exception;
 use League\OAuth2\Server\Exception\OAuthServerException;
 use SimpleSAML\Error;
+use SimpleSAML\Error\BadRequest;
 use Psr\Http\Message\ResponseInterface;
 use SimpleSAML\Module\oidc\Server\AuthorizationServer;
 use SimpleSAML\Module\oidc\Server\Exceptions\OidcServerException;
@@ -65,22 +67,41 @@ class OAuth2AuthorizationController
      */
     public function __invoke(ServerRequest $request): ResponseInterface
     {
-        $authorizationRequest = $this->authorizationServer->validateAuthorizationRequest($request);
+        try {
+            $authorizationRequest = $this->authorizationServer->validateAuthorizationRequest($request);
 
-        $user = $this->authenticationService->getAuthenticateUser($request);
+            $user = $this->authenticationService->getAuthenticateUser($request);
 
-        $authorizationRequest->setUser($user);
-        $authorizationRequest->setAuthorizationApproved(true);
+            $authorizationRequest->setUser($user);
+            $authorizationRequest->setAuthorizationApproved(true);
 
-        if ($authorizationRequest instanceof AuthorizationRequest) {
-            $authorizationRequest->setIsCookieBasedAuthn($this->authenticationService->isCookieBasedAuthn());
-            $authorizationRequest->setAuthSourceId($this->authenticationService->getAuthSourceId());
-            $authorizationRequest->setSessionId($this->authenticationService->getSessionId());
+            if ($authorizationRequest instanceof AuthorizationRequest) {
+                $authorizationRequest->setIsCookieBasedAuthn($this->authenticationService->isCookieBasedAuthn());
+                $authorizationRequest->setAuthSourceId($this->authenticationService->getAuthSourceId());
+                $authorizationRequest->setSessionId($this->authenticationService->getSessionId());
 
-            $this->validatePostAuthnAuthorizationRequest($authorizationRequest);
+                $this->validatePostAuthnAuthorizationRequest($authorizationRequest);
+            }
+
+            return $this->authorizationServer->completeAuthorizationRequest($authorizationRequest, new Response());
+        } catch (Exception $e) {
+            if (!($e instanceof BadRequest)) {
+                MetricLogger::getInstance()->logMetric(
+                    'oidc',
+                    'error',
+                    [
+                        'message' => $e->getMessage(),
+                        'oidc' => [
+                                'endpoint' => 'authorize',
+                            ]
+                            // authorize endpoint doesn't contain secrets so okay to log all params
+                            + $request->getQueryParams()
+                    ]
+                );
+            }
+
+            throw $e;
         }
-
-        return $this->authorizationServer->completeAuthorizationRequest($authorizationRequest, new Response());
     }
 
     /**

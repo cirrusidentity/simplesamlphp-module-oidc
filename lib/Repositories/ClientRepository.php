@@ -207,6 +207,14 @@ EOS
             $stmt,
             $client->getState()
         );
+        MetricLogger::getInstance()->logMetric(
+            'oidc',
+            'manage',
+            [
+                'action' => 'add',
+                'clientId' => $client->getIdentifier()
+            ]
+        );
     }
 
     public function delete(ClientEntityInterface $client, ?string $owner = null): void
@@ -219,6 +227,14 @@ EOS
             $owner
         );
         $this->database->write($sqlQuery, $params);
+        MetricLogger::getInstance()->logMetric(
+            'oidc',
+            'manage',
+            [
+                'action' => 'delete',
+                'clientId' => $client->getIdentifier()
+            ]
+        );
     }
 
     public function update(ClientEntityInterface $client, ?string $owner = null): void

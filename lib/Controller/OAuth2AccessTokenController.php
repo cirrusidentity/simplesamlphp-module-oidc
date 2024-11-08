@@ -14,6 +14,8 @@
 
 namespace SimpleSAML\Module\oidc\Controller;
 
+use Exception;
+use CirrusIdentity\SSP\Utils\MetricLogger;
 use SimpleSAML\Module\oidc\Repositories\AllowedOriginRepository;
 use SimpleSAML\Module\oidc\Server\AuthorizationServer;
 use Laminas\Diactoros\Response;
@@ -40,9 +42,45 @@ class OAuth2AccessTokenController
     {
         // Check if this is actually a CORS preflight request...
         if (strtoupper($request->getMethod()) === 'OPTIONS') {
-            return $this->handleCors($request);
+            try {
+                return $this->handleCors($request);
+            } catch (OidcServerException $e) {
+                MetricLogger::getInstance()->logMetric(
+                    'oidc',
+                    'error',
+                    [
+                        'message' => $e->getMessage(),
+                        'errorDescription' => $e->getPayload()["error_description"],
+                        'oidc' => [
+                                'endpoint' => 'token',
+                            ]
+                    ]
+                );
+
+                throw $e;
+            }
         }
-        return $this->authorizationServer->respondToAccessTokenRequest($request, new Response());
+
+        try {
+            return $this->authorizationServer->respondToAccessTokenRequest($request, new Response());
+        } catch (Exception $e) {
+            // TODO log anything else?
+            MetricLogger::getInstance()->logMetric(
+                'oidc',
+                'error',
+                [
+                    'message' => $e->getMessage(),
+                    'oidc' => [
+                            'endpoint' => 'token',
+                            'clientId' => $this->getClientIdFromTokenRequest($request),
+                            'grantType' => $this->getRequestParameter("grant_type", $request)
+                        ]
+
+                ]
+            );
+
+            throw $e;
+        }
     }
 
     /**
@@ -74,5 +112,43 @@ class OAuth2AccessTokenController
         ];
 
         return new Response('php://memory', 204, $headers);
+    }
+
+    private function getClientIdFromTokenRequest(ServerRequest $request)
+    {
+        [$basicAuthUser, $basicAuthPassword] = $this->getBasicAuthCredentials($request);
+    
+        $clientId = $this->getRequestParameter('client_id', $request, $basicAuthUser);
+
+        return $clientId;
+    }
+
+    private function getBasicAuthCredentials(ServerRequest $request)
+    {
+        if (!$request->hasHeader('Authorization')) {
+            return [null, null];
+        }
+        
+        $header = $request->getHeader('Authorization')[0];
+        if (\strpos($header, 'Basic ') !== 0) {
+            return [null, null];
+        }
+        
+        if (!($decoded = \base64_decode(\substr($header, 6)))) {
+            return [null, null];
+        }
+            
+        if (\strpos($decoded, ':') === false) {
+            return [null, null]; // HTTP Basic header without colon isn't valid
+        }
+    
+        return \explode(':', $decoded, 2);
+    }
+
+    private function getRequestParameter($parameter, ServerRequest $request, $default = null)
+    {       
+        $requestParameters = (array) $request->getParsedBody();
+        
+        return $requestParameters[$parameter] ?? $default;
     }
 }

@@ -2,9 +2,12 @@
 
 namespace SimpleSAML\Module\oidc\Server\Grants;
 
+use CirrusIdentity\SSP\Utils\MetricLogger;
+use DateInterval;
 use Exception;
 use League\OAuth2\Server\Grant\RefreshTokenGrant as OAuth2RefreshTokenGrant;
 use League\OAuth2\Server\RequestEvent;
+use League\OAuth2\Server\ResponseTypes\ResponseTypeInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use SimpleSAML\Module\oidc\Server\Exceptions\OidcServerException;
 
@@ -39,5 +42,31 @@ class RefreshTokenGrant extends OAuth2RefreshTokenGrant
         }
 
         return $refreshTokenData;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function respondToAccessTokenRequest(
+        ServerRequestInterface $request,
+        ResponseTypeInterface $responseType,
+        DateInterval $accessTokenTTL
+    ) {
+        $responseType = parent::respondToAccessTokenRequest($request, $responseType, $accessTokenTTL);
+
+        $client = $this->validateClient($request);
+        $encryptedRefreshToken = $this->getRequestParameter('refresh_token', $request);
+
+        MetricLogger::getInstance()->logMetric(
+            'oidc',
+            'token',
+            [
+                'oldRefreshTokenPrefix' => substr($encryptedRefreshToken, 0, 20),
+                'grantType' => $this->getIdentifier(),
+                'clientId' => $client->getIdentifier()
+            ]
+        );
+
+        return $responseType;
     }
 }

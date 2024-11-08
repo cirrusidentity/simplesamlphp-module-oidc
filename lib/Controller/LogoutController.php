@@ -2,6 +2,7 @@
 
 namespace SimpleSAML\Module\oidc\Controller;
 
+use CirrusIdentity\SSP\Utils\MetricLogger;
 use Exception;
 use SimpleSAML\Error\BadRequest;
 use SimpleSAML\Module\oidc\Factories\TemplateFactory;
@@ -66,66 +67,93 @@ class LogoutController
         //      (FCL has challenges with User Agents Blocking Access to Third-Party Content:
         //      https://openid.net/specs/openid-connect-frontchannel-1_0.html#ThirdPartyContent)
 
-        $logoutRequest = $this->authorizationServer->validateLogoutRequest($request);
+        try {
+            $logoutRequest = $this->authorizationServer->validateLogoutRequest($request);
 
-        // Set indication that the logout is initiated using OIDC protocol. This will be checked in the
-        // logoutHandler() method.
-        $this->sessionService->setIsOidcInitiatedLogout(true);
+            // Set indication that the logout is initiated using OIDC protocol. This will be checked in the
+            // logoutHandler() method.
+            $this->sessionService->setIsOidcInitiatedLogout(true);
 
-        // Indication if any there was a call to logout action on any auth source at all...
-        $wasLogoutActionCalled = false;
+            // Indication if any there was a call to logout action on any auth source at all...
+            $wasLogoutActionCalled = false;
 
-        $sidClaim = null;
+            $sidClaim = null;
 
-        // If id_token_hint was provided, resolve session ID
-        $idTokenHint = $logoutRequest->getIdTokenHint();
-        if ($idTokenHint !== null) {
-            $sidClaim = $idTokenHint->claims()->get('sid');
-        }
+            // If id_token_hint was provided, resolve session ID
+            $idTokenHint = $logoutRequest->getIdTokenHint();
+            if ($idTokenHint !== null) {
+                $sidClaim = $idTokenHint->claims()->get('sid');
+            }
 
-        // Check if RP is requesting logout for session that previously existed (not this current session).
-        // Claim 'sid' from 'id_token_hint' logout parameter indicates for which session should logout be
-        // performed (sid is session ID used when ID token was issued during authn). If the requested
-        // sid is different from the current session ID, try to find the requested session.
-        if (
-            $sidClaim !== null &&
-            $this->sessionService->getCurrentSession()->getSessionId() !== $sidClaim
-        ) {
-            try {
-                if (($sidSession = $this->sessionService->getSessionById($sidClaim)) !== null) {
-                    $sidSessionValidAuthorities = $sidSession->getAuthorities();
+            // Check if RP is requesting logout for session that previously existed (not this current session).
+            // Claim 'sid' from 'id_token_hint' logout parameter indicates for which session should logout be
+            // performed (sid is session ID used when ID token was issued during authn). If the requested
+            // sid is different from the current session ID, try to find the requested session.
+            if (
+                $sidClaim !== null &&
+                $this->sessionService->getCurrentSession()->getSessionId() !== $sidClaim
+            ) {
+                try {
+                    if (($sidSession = $this->sessionService->getSessionById($sidClaim)) !== null) {
+                        $sidSessionValidAuthorities = $sidSession->getAuthorities();
 
-                    if (! empty($sidSessionValidAuthorities)) {
-                        $wasLogoutActionCalled = true;
-                        // Create a SessionLogoutTicket so that the sid is available in the static logoutHandler()
-                        $this->sessionLogoutTicketStoreBuilder->getInstance()->add($sidClaim);
-                        // Initiate logout for every valid auth source for the requested session.
-                        foreach ($sidSessionValidAuthorities as $authSourceId) {
-                            $sidSession->doLogout($authSourceId);
+                        if (! empty($sidSessionValidAuthorities)) {
+                            $wasLogoutActionCalled = true;
+                            // Create a SessionLogoutTicket so that the sid is available in the static logoutHandler()
+                            $this->sessionLogoutTicketStoreBuilder->getInstance()->add($sidClaim);
+                            // Initiate logout for every valid auth source for the requested session.
+                            foreach ($sidSessionValidAuthorities as $authSourceId) {
+                                $sidSession->doLogout($authSourceId);
+                            }
                         }
                     }
+                } catch (Throwable $exception) {
+                    $this->loggerService->warning(
+                        sprintf('Logout: could not get session with ID %s, error: %s', $sidClaim, $exception->getMessage())
+                    );
                 }
-            } catch (Throwable $exception) {
-                $this->loggerService->warning(
-                    sprintf('Logout: could not get session with ID %s, error: %s', $sidClaim, $exception->getMessage())
-                );
             }
-        }
 
-        $currentSessionValidAuthorities = $this->sessionService->getCurrentSession()->getAuthorities();
-        if (! empty($currentSessionValidAuthorities)) {
-            $wasLogoutActionCalled = true;
-            // Initiate logout for every valid auth source for the current session.
-            foreach ($this->sessionService->getCurrentSession()->getAuthorities() as $authSourceId) {
-                $this->sessionService->getCurrentSession()->doLogout($authSourceId);
+            $currentSessionValidAuthorities = $this->sessionService->getCurrentSession()->getAuthorities();
+            if (! empty($currentSessionValidAuthorities)) {
+                $wasLogoutActionCalled = true;
+                // Initiate logout for every valid auth source for the current session.
+                foreach ($this->sessionService->getCurrentSession()->getAuthorities() as $authSourceId) {
+                    $this->sessionService->getCurrentSession()->doLogout($authSourceId);
+                }
             }
+
+            // Set indication for OIDC initiated logout back to false, so that the logoutHandler() method does not
+            // run for other logout initiated actions, like (currently) re-authentication...
+            $this->sessionService->setIsOidcInitiatedLogout(false);
+
+            MetricLogger::getInstance()->logMetric(
+                'oidc',
+                'logout',
+                [
+                    'sessionId' => $this->sessionService->getCurrentSession()->getSessionId(),
+                    'sessionTrackID' => $this->sessionService->getCurrentSession()->getTrackID(),
+                    'sidClaim' => $sidClaim,
+                    'idTokenHint' => $idTokenHint
+                ]
+            );
+
+            return $this->resolveResponse($logoutRequest, $wasLogoutActionCalled);
+        } catch (Exception $e) {
+            MetricLogger::getInstance()->logMetric(
+                'oidc',
+                'error',
+                [
+                    'message' => $e->getMessage(),
+                    'oidc' => [
+                            'endpoint' => 'logout',
+                        ]
+
+                ]
+            );
+
+            throw $e;
         }
-
-        // Set indication for OIDC initiated logout back to false, so that the logoutHandler() method does not
-        // run for other logout initiated actions, like (currently) re-authentication...
-        $this->sessionService->setIsOidcInitiatedLogout(false);
-
-        return $this->resolveResponse($logoutRequest, $wasLogoutActionCalled);
     }
 
     /**

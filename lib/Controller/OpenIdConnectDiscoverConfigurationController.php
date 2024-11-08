@@ -14,6 +14,8 @@
 
 namespace SimpleSAML\Module\oidc\Controller;
 
+use CirrusIdentity\SSP\Utils\MetricLogger;
+use Exception;
 use Laminas\Diactoros\Response\JsonResponse;
 use Laminas\Diactoros\ServerRequest;
 use SimpleSAML\Module\oidc\Services\OidcOpenIdProviderMetadataService;
@@ -33,6 +35,22 @@ class OpenIdConnectDiscoverConfigurationController
 
     public function __invoke(ServerRequest $serverRequest): JsonResponse
     {
-        return new JsonResponse($this->oidcOpenIdProviderMetadataService->getMetadata());
+        try {
+            return new JsonResponse($this->oidcOpenIdProviderMetadataService->getMetadata());
+        } catch (Exception $e) {
+            MetricLogger::getInstance()->logMetric(
+                'oidc',
+                'error',
+                [
+                    'message' => $e->getMessage(),
+                    'oidc' => [
+                            'endpoint' => 'configuration',
+                        ]
+
+                ]
+            );
+
+            throw $e;
+        }
     }
 }

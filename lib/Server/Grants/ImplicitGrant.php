@@ -2,6 +2,7 @@
 
 namespace SimpleSAML\Module\oidc\Server\Grants;
 
+use CirrusIdentity\SSP\Utils\MetricLogger;
 use DateInterval;
 use League\OAuth2\Server\Entities\UserEntityInterface;
 use League\OAuth2\Server\Exception\OAuthServerException;
@@ -222,6 +223,18 @@ class ImplicitGrant extends OAuth2ImplicitGrant
                 $responseParams,
                 $this->queryDelimiter
             )
+        );
+
+        MetricLogger::getInstance()->logMetric(
+            'oidc',
+            'authorize',
+            [
+                'idTokenClaims' => array_keys($idToken->claims()->all()),
+                'sub' => $idToken->claims()->get("sub"),
+                'scopes' => $finalizedScopes,
+                'grantType' => $this->getIdentifier(),
+                'clientId' => $authorizationRequest->getClient()->getIdentifier()
+            ]
         );
 
         return $response;

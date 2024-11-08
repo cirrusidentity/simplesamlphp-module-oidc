@@ -2,6 +2,7 @@
 
 namespace SimpleSAML\Module\oidc\Server\Grants;
 
+use CirrusIdentity\SSP\Utils\MetricLogger;
 use DateInterval;
 use DateTimeImmutable;
 use League\OAuth2\Server\CodeChallengeVerifiers\CodeChallengeVerifierInterface;
@@ -230,6 +231,17 @@ class AuthCodeGrant extends OAuth2AuthCodeGrant implements
                     'state' => $authorizationRequest->getState(),
                 ]
             )
+        );
+
+        MetricLogger::getInstance()->logMetric(
+            'oidc',
+            'authorize',
+            [
+                'authCodeId' => $authCode->getIdentifier(),
+                'scopes' => $authCode->getScopes(),
+                'grantType' => $this->getIdentifier(),
+                'clientId' => $authCode->getClient()->getIdentifier()
+            ]
         );
 
         return $response;
@@ -463,6 +475,17 @@ class AuthCodeGrant extends OAuth2AuthCodeGrant implements
 
         // Revoke used auth code
         $this->authCodeRepository->revokeAuthCode($authCodePayload->auth_code_id);
+
+        MetricLogger::getInstance()->logMetric(
+            'oidc',
+            'token',
+            [
+                'authCodeId' => $authCodePayload->auth_code_id,
+                'grantType' => $this->getIdentifier(),
+                'clientId' => $client->getIdentifier(),
+                'sub' => $authCodePayload->user_id
+            ]
+        );
 
         return $responseType;
     }

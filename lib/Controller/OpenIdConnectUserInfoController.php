@@ -14,6 +14,8 @@
 
 namespace SimpleSAML\Module\oidc\Controller;
 
+use Exception;
+use CirrusIdentity\SSP\Utils\MetricLogger;
 use Laminas\Diactoros\Response\JsonResponse;
 use Laminas\Diactoros\ServerRequest;
 use Laminas\Diactoros\Response;
@@ -74,29 +76,74 @@ class OpenIdConnectUserInfoController
     {
         // Check if this is actually a CORS preflight request...
         if (strtoupper($request->getMethod()) === 'OPTIONS') {
-            return $this->handleCors($request);
+            try {
+                return $this->handleCors($request);
+            } catch (OidcServerException $e) {
+                MetricLogger::getInstance()->logMetric(
+                    'oidc',
+                    'error',
+                    [
+                        'message' => $e->getMessage(),
+                        'errorDescription' => $e->getPayload()["error_description"],
+                        'oidc' => [
+                                'endpoint' => 'userinfo',
+                            ]
+                    ]
+                );
+
+                throw $e;
+            }
         }
 
-        $authorization = $this->resourceServer->validateAuthenticatedRequest($request);
+        try {
+            $authorization = $this->resourceServer->validateAuthenticatedRequest($request);
 
-        $tokenId = $authorization->getAttribute('oauth_access_token_id');
-        $scopes = $authorization->getAttribute('oauth_scopes');
+            $tokenId = $authorization->getAttribute('oauth_access_token_id');
+            $scopes = $authorization->getAttribute('oauth_scopes');
 
-        $accessToken = $this->accessTokenRepository->findById($tokenId);
-        if (!$accessToken instanceof AccessTokenEntity) {
-            throw new UserNotFound('Access token not found');
+            $accessToken = $this->accessTokenRepository->findById($tokenId);
+            if (!$accessToken instanceof AccessTokenEntity) {
+                throw new UserNotFound('Access token not found');
+            }
+            $user = $this->getUser($accessToken);
+
+            $claims = $this->claimTranslatorExtractor->extract($scopes, $user->getClaims());
+            $requestedClaims =  $accessToken->getRequestedClaims();
+            $additionalClaims = $this->claimTranslatorExtractor->extractAdditionalUserInfoClaims(
+                $requestedClaims,
+                $user->getClaims()
+            );
+            $claims = array_merge($additionalClaims, $claims);
+
+            MetricLogger::getInstance()->logMetric(
+                'oidc',
+                'userinfo',
+                [
+                    'tokenId' => $tokenId,
+                    'clientId' => $accessToken->getClient()->getIdentifier(),
+                    'sub' => $claims['sub'],
+                    'claims' => array_keys($claims)
+                ]
+            );
+
+            return new JsonResponse($claims);
+        } catch (Exception $e) {
+            // TODO log anything else?  Assume the token is passed through the authorization header?  OK to log that, or a prefix if there's no sensitive data there, or a hash of it?
+            MetricLogger::getInstance()->logMetric(
+                'oidc',
+                'error',
+                [
+                    'message' => $e->getMessage(),
+                    'oidc' => [
+                            'endpoint' => 'userinfo',
+                            'tokenId' => $tokenId
+                        ]
+
+                ]
+            );
+
+            throw $e;
         }
-        $user = $this->getUser($accessToken);
-
-        $claims = $this->claimTranslatorExtractor->extract($scopes, $user->getClaims());
-        $requestedClaims =  $accessToken->getRequestedClaims();
-        $additionalClaims = $this->claimTranslatorExtractor->extractAdditionalUserInfoClaims(
-            $requestedClaims,
-            $user->getClaims()
-        );
-        $claims = array_merge($additionalClaims, $claims);
-
-        return new JsonResponse($claims);
     }
 
     /**
