@@ -109,7 +109,11 @@ class LogoutController
                     }
                 } catch (Throwable $exception) {
                     $this->loggerService->warning(
-                        sprintf('Logout: could not get session with ID %s, error: %s', $sidClaim, $exception->getMessage())
+                        sprintf(
+                            'Logout: could not get session with ID %s, error: %s',
+                            $sidClaim,
+                            $exception->getMessage()
+                        )
                     );
                 }
             }
