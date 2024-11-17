@@ -78,11 +78,15 @@ class LogoutController
             $wasLogoutActionCalled = false;
 
             $sidClaim = null;
+            $subClaim = null;
+            $audClaim = null;
 
             // If id_token_hint was provided, resolve session ID
             $idTokenHint = $logoutRequest->getIdTokenHint();
             if ($idTokenHint !== null) {
                 $sidClaim = $idTokenHint->claims()->get('sid');
+                $subClaim = $idTokenHint->claims()->get('sub');
+                $audClaim = $idTokenHint->claims()->get('aud');
             }
 
             // Check if RP is requesting logout for session that previously existed (not this current session).
@@ -138,7 +142,9 @@ class LogoutController
                     'sessionId' => $this->sessionService->getCurrentSession()->getSessionId(),
                     'sessionTrackID' => $this->sessionService->getCurrentSession()->getTrackID(),
                     'sidClaim' => $sidClaim,
-                    'idTokenHint' => $idTokenHint
+                    'sub' => $subClaim,
+                    'aud' => $audClaim,
+                    'wasLogoutActionCalled' => $wasLogoutActionCalled
                 ]
             );
 
