@@ -481,9 +481,10 @@ class AuthCodeGrant extends OAuth2AuthCodeGrant implements
             'token',
             [
                 'authCodeId' => $authCodePayload->auth_code_id,
+                'sub' => $authCodePayload->user_id,
+                'scopes' => $scopes,
                 'grantType' => $this->getIdentifier(),
                 'clientId' => $client->getIdentifier(),
-                'sub' => $authCodePayload->user_id
             ]
         );
 

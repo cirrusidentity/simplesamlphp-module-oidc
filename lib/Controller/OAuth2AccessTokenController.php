@@ -64,7 +64,6 @@ class OAuth2AccessTokenController
         try {
             return $this->authorizationServer->respondToAccessTokenRequest($request, new Response());
         } catch (Exception $e) {
-            // TODO log anything else?
             MetricLogger::getInstance()->logMetric(
                 'oidc',
                 'error',

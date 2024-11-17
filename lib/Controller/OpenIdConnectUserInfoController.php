@@ -128,7 +128,6 @@ class OpenIdConnectUserInfoController
 
             return new JsonResponse($claims);
         } catch (Exception $e) {
-            // TODO log anything else?  Assume the token is passed through the authorization header?  OK to log that, or a prefix if there's no sensitive data there, or a hash of it?
             MetricLogger::getInstance()->logMetric(
                 'oidc',
                 'error',

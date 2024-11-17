@@ -14,6 +14,7 @@
 
 namespace SimpleSAML\Module\oidc\Server\ResponseTypes;
 
+use CirrusIdentity\SSP\Utils\MetricLogger;
 use Exception;
 use League\OAuth2\Server\Entities\AccessTokenEntityInterface;
 use League\OAuth2\Server\Entities\ScopeEntityInterface;
@@ -100,6 +101,17 @@ class IdTokenResponse extends BearerTokenResponse implements
             $this->getAuthTime(),
             $this->getAcr(),
             $this->getSessionId()
+        );
+
+        MetricLogger::getInstance()->logMetric(
+            'oidc',
+            'idToken',
+            [
+                'idTokenClaims' => array_keys($token->claims()->all()),
+                'sub' => $token->claims()->get("sub"),
+                'scopes' => $accessToken->getScopes(),
+                'clientId' => $accessToken->getClient()->getIdentifier()
+            ]
         );
 
         return [

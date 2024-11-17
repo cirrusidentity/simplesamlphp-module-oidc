@@ -144,6 +144,16 @@ class LogoutController
 
             return $this->resolveResponse($logoutRequest, $wasLogoutActionCalled);
         } catch (Exception $e) {
+            $requestMethod = strtoupper($request->getMethod());
+            $idTokenHintParam = '';
+            if ($requestMethod === 'GET') {
+                $idTokenHintParam = $request->getQueryParams()['id_token_hint'] ?? '';
+            } elseif ($requestMethod === 'POST') {
+                if (is_array($parsedBody = $request->getParsedBody())) {
+                    $idTokenHintParam = $parsedBody['id_token_hint'] ?? '';
+                }
+            }
+
             MetricLogger::getInstance()->logMetric(
                 'oidc',
                 'error',
@@ -151,6 +161,7 @@ class LogoutController
                     'message' => $e->getMessage(),
                     'oidc' => [
                             'endpoint' => 'logout',
+                            'idTokenHint' => $idTokenHintParam
                         ]
 
                 ]
