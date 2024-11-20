@@ -108,6 +108,7 @@ class IdTokenResponse extends BearerTokenResponse implements
             'idToken',
             [
                 'idTokenClaims' => array_keys($token->claims()->all()),
+                'idTokenId' => $token->claims()->get("jti"),
                 'sub' => $token->claims()->get("sub"),
                 'scopes' => $accessToken->getScopes(),
                 'clientId' => $accessToken->getClient()->getIdentifier()
@@ -186,5 +187,10 @@ class IdTokenResponse extends BearerTokenResponse implements
     public function setSessionId(?string $sessionId): void
     {
         $this->sessionId = $sessionId;
+    }
+
+    public function getTokenId(): ?string
+    {
+        return $this->accessToken->getIdentifier();
     }
 }

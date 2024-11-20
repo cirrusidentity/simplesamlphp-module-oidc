@@ -238,6 +238,7 @@ class AuthCodeGrant extends OAuth2AuthCodeGrant implements
             'authorize',
             [
                 'authCodeId' => $authCode->getIdentifier(),
+                'sub' => $user->getIdentifier(),
                 'scopes' => $authCode->getScopes(),
                 'grantType' => $this->getIdentifier(),
                 'clientId' => $authCode->getClient()->getIdentifier()
@@ -481,6 +482,7 @@ class AuthCodeGrant extends OAuth2AuthCodeGrant implements
             'token',
             [
                 'authCodeId' => $authCodePayload->auth_code_id,
+                'tokenId' => $accessToken->getIdentifier(),
                 'sub' => $authCodePayload->user_id,
                 'scopes' => $scopes,
                 'grantType' => $this->getIdentifier(),

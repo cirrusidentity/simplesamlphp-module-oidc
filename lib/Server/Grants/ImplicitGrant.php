@@ -230,6 +230,8 @@ class ImplicitGrant extends OAuth2ImplicitGrant
             'authorize',
             [
                 'idTokenClaims' => array_keys($idToken->claims()->all()),
+                'idTokenId' => $idToken->claims()->get("jti"),
+                'tokenId' => $accessToken->getIdentifier(),
                 'sub' => $idToken->claims()->get("sub"),
                 'scopes' => $finalizedScopes,
                 'grantType' => $this->getIdentifier(),

@@ -10,6 +10,7 @@ use League\OAuth2\Server\RequestEvent;
 use League\OAuth2\Server\ResponseTypes\ResponseTypeInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use SimpleSAML\Module\oidc\Server\Exceptions\OidcServerException;
+use SimpleSAML\Module\oidc\Server\ResponseTypes\IdTokenResponse;
 
 class RefreshTokenGrant extends OAuth2RefreshTokenGrant
 {
@@ -62,6 +63,7 @@ class RefreshTokenGrant extends OAuth2RefreshTokenGrant
             'token',
             [
                 'oldRefreshTokenPrefix' => substr($encryptedRefreshToken, 0, 20),
+                'tokenId' => $responseType instanceof IdTokenResponse ? $responseType->getTokenId() : null,
                 'grantType' => $this->getIdentifier(),
                 'clientId' => $client->getIdentifier()
             ]
