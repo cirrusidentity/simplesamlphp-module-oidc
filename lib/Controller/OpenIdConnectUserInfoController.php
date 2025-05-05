@@ -19,6 +19,7 @@ use CirrusIdentity\SSP\Utils\MetricLogger;
 use Laminas\Diactoros\Response\JsonResponse;
 use Laminas\Diactoros\ServerRequest;
 use Laminas\Diactoros\Response;
+use League\OAuth2\Server\Exception\OAuthServerException;
 use League\OAuth2\Server\ResourceServer;
 use SimpleSAML\Error\UserNotFound;
 use SimpleSAML\Module\oidc\ClaimTranslatorExtractor;
@@ -87,6 +88,7 @@ class OpenIdConnectUserInfoController
                         'errorDescription' => $e->getPayload()["error_description"],
                         'oidc' => [
                                 'endpoint' => 'userinfo',
+                                'hint' => $e->getHint(),
                             ]
                     ]
                 );
@@ -128,6 +130,10 @@ class OpenIdConnectUserInfoController
 
             return new JsonResponse($claims);
         } catch (Exception $e) {
+            $hint = null;
+            if ($e instanceof OAuthServerException) {
+                $hint = $e->getHint();
+            }
             MetricLogger::getInstance()->logMetric(
                 'oidc',
                 'error',
@@ -135,7 +141,8 @@ class OpenIdConnectUserInfoController
                     'message' => $e->getMessage(),
                     'oidc' => [
                             'endpoint' => 'userinfo',
-                            'tokenId' => $tokenId
+                            'tokenId' => $tokenId,
+                            'hint' => $hint,
                         ]
 
                 ]
