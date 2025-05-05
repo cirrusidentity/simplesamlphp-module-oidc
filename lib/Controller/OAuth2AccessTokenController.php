@@ -53,6 +53,7 @@ class OAuth2AccessTokenController
                         'errorDescription' => $e->getPayload()["error_description"],
                         'oidc' => [
                                 'endpoint' => 'token',
+                                'hint' => $e->getHint(),
                             ]
                     ]
                 );
@@ -64,6 +65,10 @@ class OAuth2AccessTokenController
         try {
             return $this->authorizationServer->respondToAccessTokenRequest($request, new Response());
         } catch (Exception $e) {
+            $hint = null;
+            if ($e instanceof OidcServerException) {
+                $hint = $e->getHint();
+            }
             MetricLogger::getInstance()->logMetric(
                 'oidc',
                 'error',
@@ -71,6 +76,7 @@ class OAuth2AccessTokenController
                     'message' => $e->getMessage(),
                     'oidc' => [
                             'endpoint' => 'token',
+                            'hint' => $hint,
                             'clientId' => $this->getClientIdFromTokenRequest($request),
                             'grantType' => $this->getRequestParameter("grant_type", $request)
                         ]

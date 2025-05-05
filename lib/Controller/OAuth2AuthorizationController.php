@@ -87,16 +87,21 @@ class OAuth2AuthorizationController
         } catch (Exception $e) {
             if (!($e instanceof BadRequest)) {
                 $queryParams = $request->getQueryParams();
-                $scope = $queryParams['scope'];
+                $scope = $queryParams['scope'] ?? "";
+                $hint = null;
+                if ($e instanceof OidcServerException) {
+                    $hint = $e->getHint();
+                }
                 MetricLogger::getInstance()->logMetric(
                     'oidc',
                     'error',
                     [
                         'message' => $e->getMessage(),
-                        'clientId' => $queryParams['client_id'],
+                        'clientId' => $queryParams['client_id'] ?? null,
                         'scopes' => ($scope === null || $scope === "") ? [] : explode(" ", $scope),
                         'oidc' => [
                                 'endpoint' => 'authorize',
+                                'hint' => $hint,
                             ]
                             // authorize endpoint doesn't contain secrets so okay to log all params
                             + $queryParams

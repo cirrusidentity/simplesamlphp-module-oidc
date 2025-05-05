@@ -87,6 +87,7 @@ class OpenIdConnectUserInfoController
                         'errorDescription' => $e->getPayload()["error_description"],
                         'oidc' => [
                                 'endpoint' => 'userinfo',
+                                'hint' => $e->getHint(),
                             ]
                     ]
                 );
@@ -128,6 +129,10 @@ class OpenIdConnectUserInfoController
 
             return new JsonResponse($claims);
         } catch (Exception $e) {
+            $hint = null;
+            if ($e instanceof OidcServerException) {
+                $hint = $e->getHint();
+            }
             MetricLogger::getInstance()->logMetric(
                 'oidc',
                 'error',
@@ -135,7 +140,8 @@ class OpenIdConnectUserInfoController
                     'message' => $e->getMessage(),
                     'oidc' => [
                             'endpoint' => 'userinfo',
-                            'tokenId' => $tokenId
+                            'tokenId' => $tokenId,
+                            'hint' => $hint,
                         ]
 
                 ]
