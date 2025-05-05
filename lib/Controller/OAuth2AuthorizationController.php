@@ -89,7 +89,7 @@ class OAuth2AuthorizationController
                 $queryParams = $request->getQueryParams();
                 $scope = $queryParams['scope'] ?? "";
                 $hint = null;
-                if ($e instanceof OidcServerException) {
+                if ($e instanceof OAuthServerException) {
                     $hint = $e->getHint();
                 }
                 MetricLogger::getInstance()->logMetric(

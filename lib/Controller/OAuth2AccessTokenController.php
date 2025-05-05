@@ -16,6 +16,7 @@ namespace SimpleSAML\Module\oidc\Controller;
 
 use Exception;
 use CirrusIdentity\SSP\Utils\MetricLogger;
+use League\OAuth2\Server\Exception\OAuthServerException;
 use SimpleSAML\Module\oidc\Repositories\AllowedOriginRepository;
 use SimpleSAML\Module\oidc\Server\AuthorizationServer;
 use Laminas\Diactoros\Response;
@@ -66,7 +67,7 @@ class OAuth2AccessTokenController
             return $this->authorizationServer->respondToAccessTokenRequest($request, new Response());
         } catch (Exception $e) {
             $hint = null;
-            if ($e instanceof OidcServerException) {
+            if ($e instanceof OAuthServerException) {
                 $hint = $e->getHint();
             }
             MetricLogger::getInstance()->logMetric(
