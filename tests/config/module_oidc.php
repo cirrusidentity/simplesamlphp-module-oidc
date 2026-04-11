@@ -37,7 +37,32 @@ $config = [
     // useridattr is the attribute-name that contains the userid as returned from idp. By default, this attribute
     // will be dynamically added to the 'sub' claim in the attribute-to-claim translation table (you will probably
     // want to use this attribute as the 'sub' claim since it designates unique identifier for the user).
-    'useridattr' => 'uid',
+    'useridattr' => 'urn:oid:1.3.6.1.4.1.5923.1.1.1.6',
+
+    // Settings regarding Authentication Processing Filters.
+    // Note: OIDC authN state array will not contain all of the keys which are available during SAML authN,
+    // like Service Provider metadata, etc.
+    //
+    // At the moment, the following SAML authN data will be available during OIDC authN in the sate array:
+    // - ['Attributes'], ['Authority'], ['AuthnInstant'], ['Expire']
+    // Source and destination will have entity IDs corresponding to the OP issuer ID and Client ID respectively.
+    // - ['Source']['entityid'] - contains OpenId Provider issuer ID
+    // - ['Destination']['entityid'] - contains Relying Party (OIDC Client) ID
+    // In addition to that, the following OIDC related data will be available in the state array:
+    // - ['Oidc']['OpenIdProviderMetadata'] - contains information otherwise available from the OIDC configuration URL.
+    // - ['Oidc']['RelyingPartyMetadata'] - contains information about the OIDC client making the authN request.
+    // - ['Oidc']['AuthorizationRequestParameters'] - contains relevant authorization request query parameters.
+    //
+    // List of authproc filters which will run for every OIDC authN. Add filters as described in docs for SAML authproc
+    // @see https://simplesamlphp.org/docs/stable/simplesamlphp-authproc
+    'authproc.oidc' => [
+        // Add authproc filters here
+        102 => array(
+            'class' => 'core:AttributeMap',
+            'urn:oid:1.3.6.1.4.1.5923.1.1.1.6' => 'eduPersonPrincipalName',
+            '%duplicate'
+        ),
+    ],
 
     // Optional custom scopes. You can create as many scopes as you want and assign claims to them.
     'scopes' => [

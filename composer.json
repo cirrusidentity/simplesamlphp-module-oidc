@@ -38,6 +38,7 @@
     },
     "require-dev": {
         "friendsofphp/php-cs-fixer": "^2.10",
+        "cirrusidentity/simplesamlphp-test-utils": "dev-master",
         "friends-of-phpspec/phpspec-code-coverage": "^6.1",
         "phpspec/phpspec": "^7.1.0",
         "phpunit/php-code-coverage": "^9.0.0",

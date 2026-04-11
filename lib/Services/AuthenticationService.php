@@ -111,7 +111,7 @@ class AuthenticationService
         }
 
         $state = $this->prepareStateArray($authSimple, $oidcClient, $request);
-        $state = $this->authProcService->processState($state);
+        $this->authProcService->processState($state);
         $claims = $state['Attributes'];
 
         if (!array_key_exists($this->userIdAttr, $claims)) {
