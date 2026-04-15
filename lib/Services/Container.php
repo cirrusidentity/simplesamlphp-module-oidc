@@ -33,6 +33,7 @@ use SimpleSAML\Module\oidc\Factories\Grant\ImplicitGrantFactory;
 use SimpleSAML\Module\oidc\Factories\Grant\OAuth2ImplicitGrantFactory;
 use SimpleSAML\Module\oidc\Factories\Grant\RefreshTokenGrantFactory;
 use SimpleSAML\Module\oidc\Factories\IdTokenResponseFactory;
+use SimpleSAML\Module\oidc\Factories\ProcessingChainFactory;
 use SimpleSAML\Module\oidc\Factories\ResourceServerFactory;
 use SimpleSAML\Module\oidc\Factories\TemplateFactory;
 use SimpleSAML\Module\oidc\Repositories\AccessTokenRepository;
@@ -147,8 +148,8 @@ class Container implements ContainerInterface
         $templateFactory = new TemplateFactory($simpleSAMLConfiguration);
         $this->services[TemplateFactory::class] = $templateFactory;
 
-        $authProcService = new AuthProcService($configurationService);
-        $this->services[AuthProcService::class] = $authProcService;
+        $processingChainFactory = new ProcessingChainFactory($configurationService);
+        $this->services[ProcessingChainFactory::class] = $processingChainFactory;
 
         $oidcOpenIdProviderMetadataService = new OidcOpenIdProviderMetadataService($configurationService);
         $this->services[OidcOpenIdProviderMetadataService::class] = $oidcOpenIdProviderMetadataService;
@@ -164,7 +165,7 @@ class Container implements ContainerInterface
         $authenticationService = new AuthenticationService(
             $userRepository,
             $authSimpleFactory,
-            $authProcService,
+            $processingChainFactory,
             $clientRepository,
             $oidcOpenIdProviderMetadataService,
             $sessionService,

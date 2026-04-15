@@ -6,6 +6,7 @@ use Laminas\Diactoros\ServerRequest;
 use League\OAuth2\Server\Exception\OAuthServerException;
 use Psr\Http\Message\ResponseInterface;
 use SimpleSAML\Error;
+use SimpleSAML\Auth\ProcessingChain;
 use SimpleSAML\Module\oidc\Controller\OAuth2AuthorizationController;
 use PHPUnit\Framework\TestCase;
 use SimpleSAML\Module\oidc\Entity\UserEntity;
@@ -60,6 +61,17 @@ class OAuth2AuthorizationControllerTest extends TestCase
 
     protected static array $sampleRequestedAcrs = ['values' => ['1', '0'], 'essential' => false];
 
+    protected array $state;
+
+    public const USER_ENTITY_ATTRIBUTES = [
+        'uid' => ['username'],
+        'eduPersonTargetedId' => ['username'],
+    ];
+    public const AUTH_DATA = ['Attributes' => self::USER_ENTITY_ATTRIBUTES];
+    public const CLIENT_ENTITY = ['id' => 'clientid', 'redirect_uri' => 'https://rp.example.org'];
+    public const AUTHZ_REQUEST_PARAMS = ['client_id' => 'clientid', 'redirect_uri' => 'https://rp.example.org'];
+    public const OIDC_OP_METADATA = ['issuer' => 'https://idp.example.org'];
+
     public function setUp(): void
     {
         $this->authenticationServiceStub = $this->createStub(AuthenticationService::class);
@@ -71,6 +83,16 @@ class OAuth2AuthorizationControllerTest extends TestCase
         $this->userEntityStub = $this->createStub(UserEntity::class);
         $this->serverRequestStub = $this->createStub(ServerRequest::class);
         $this->responseStub = $this->createStub(ResponseInterface::class);
+
+        $this->state = [
+            'Attributes' => self::AUTH_DATA['Attributes'],
+            'Oidc' => [
+                'OpenIdProviderMetadata' => self::OIDC_OP_METADATA,
+                'RelyingPartyMetadata' => self::CLIENT_ENTITY,
+                'AuthorizationRequestParameters' => self::AUTHZ_REQUEST_PARAMS,
+            ],
+            'authorizationRequest' => $this->authorizationRequestMock,
+        ];
     }
 
     /**
@@ -118,6 +140,16 @@ class OAuth2AuthorizationControllerTest extends TestCase
             ->method('validateAuthorizationRequest')
             ->willReturn($this->authorizationRequestMock);
 
+        $this->serverRequestStub
+            ->method('getQueryParams')
+            ->willReturn([ProcessingChain::AUTHPARAM => '123']);
+
+        $this->authenticationServiceStub->method('manageState')
+            ->willReturn($this->state);
+        $this->authenticationServiceStub
+            ->method('getAuthorizationRequestFromState')
+            ->willReturn($this->authorizationRequestMock);
+
         $this->expectException(OidcServerException::class);
 
         (new OAuth2AuthorizationController(
@@ -142,6 +174,16 @@ class OAuth2AuthorizationControllerTest extends TestCase
             ->willReturn(self::$sampleRequestedAcrs);
 
         $this->authorizationRequestMock->method('getAuthSourceId')->willReturn(self::$sampleAuthSourceId);
+
+        $this->serverRequestStub
+            ->method('getQueryParams')
+            ->willReturn([ProcessingChain::AUTHPARAM => '123']);
+
+        $this->authenticationServiceStub->method('manageState')
+            ->willReturn($this->state);
+        $this->authenticationServiceStub
+            ->method('getAuthorizationRequestFromState')
+            ->willReturn($this->authorizationRequestMock);
 
         $this->authorizationServerStub
             ->method('validateAuthorizationRequest')
@@ -185,6 +227,16 @@ class OAuth2AuthorizationControllerTest extends TestCase
             ->method('completeAuthorizationRequest')
             ->willReturn($this->responseStub);
 
+        $this->serverRequestStub
+            ->method('getQueryParams')
+            ->willReturn([ProcessingChain::AUTHPARAM => '123']);
+
+        $this->authenticationServiceStub->method('manageState')
+            ->willReturn($this->state);
+        $this->authenticationServiceStub
+            ->method('getAuthorizationRequestFromState')
+            ->willReturn($this->authorizationRequestMock);
+
         $this->authorizationRequestMock->expects($this->once())->method('setAcr')->with('0');
 
         (new OAuth2AuthorizationController(
@@ -223,6 +275,16 @@ class OAuth2AuthorizationControllerTest extends TestCase
             ->method('completeAuthorizationRequest')
             ->willReturn($this->responseStub);
 
+        $this->serverRequestStub
+            ->method('getQueryParams')
+            ->willReturn([ProcessingChain::AUTHPARAM => '123']);
+
+        $this->authenticationServiceStub->method('manageState')
+            ->willReturn($this->state);
+        $this->authenticationServiceStub
+            ->method('getAuthorizationRequestFromState')
+            ->willReturn($this->authorizationRequestMock);
+
         $this->expectException(OidcServerException::class);
 
         (new OAuth2AuthorizationController(
@@ -259,6 +321,16 @@ class OAuth2AuthorizationControllerTest extends TestCase
         $this->authorizationServerStub
             ->method('completeAuthorizationRequest')
             ->willReturn($this->responseStub);
+
+        $this->serverRequestStub
+            ->method('getQueryParams')
+            ->willReturn([ProcessingChain::AUTHPARAM => '123']);
+
+        $this->authenticationServiceStub->method('manageState')
+            ->willReturn($this->state);
+        $this->authenticationServiceStub
+            ->method('getAuthorizationRequestFromState')
+            ->willReturn($this->authorizationRequestMock);
 
         $this->authorizationRequestMock->expects($this->once())->method('setAcr')->with('1');
 
@@ -298,6 +370,16 @@ class OAuth2AuthorizationControllerTest extends TestCase
             ->method('completeAuthorizationRequest')
             ->willReturn($this->responseStub);
 
+        $this->serverRequestStub
+            ->method('getQueryParams')
+            ->willReturn([ProcessingChain::AUTHPARAM => '123']);
+
+        $this->authenticationServiceStub->method('manageState')
+            ->willReturn($this->state);
+        $this->authenticationServiceStub
+            ->method('getAuthorizationRequestFromState')
+            ->willReturn($this->authorizationRequestMock);
+
         $this->authorizationRequestMock->expects($this->once())->method('setAcr')->with('1');
 
         (new OAuth2AuthorizationController(
@@ -335,6 +417,16 @@ class OAuth2AuthorizationControllerTest extends TestCase
         $this->authorizationServerStub
             ->method('completeAuthorizationRequest')
             ->willReturn($this->responseStub);
+
+        $this->serverRequestStub
+            ->method('getQueryParams')
+            ->willReturn([ProcessingChain::AUTHPARAM => '123']);
+
+        $this->authenticationServiceStub->method('manageState')
+            ->willReturn($this->state);
+        $this->authenticationServiceStub
+            ->method('getAuthorizationRequestFromState')
+            ->willReturn($this->authorizationRequestMock);
 
         $this->authorizationRequestMock->expects($this->once())->method('setAcr');
         $this->loggerServiceMock->expects($this->once())->method('warning');

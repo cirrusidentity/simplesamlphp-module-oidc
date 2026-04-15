@@ -205,4 +205,10 @@ $config = [
     // the use of "level 0" is appropriate:
 //     'forcedAcrValueForCookieAuthentication' => '0',
     'forcedAcrValueForCookieAuthentication' => null,
+    'authproc.oidc' => [
+        25 => [
+            'class' => 'core:AttributeMap',
+            'oid2name',
+        ],
+    ],
 ];

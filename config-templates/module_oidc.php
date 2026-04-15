@@ -93,7 +93,10 @@ $config = [
     // List of authproc filters which will run for every OIDC authN. Add filters as described in docs for SAML authproc
     // @see https://simplesamlphp.org/docs/stable/simplesamlphp-authproc
     'authproc.oidc' => [
-        // Add authproc filters here
+        25 => [
+            'class' => 'core:AttributeMap',
+            'oid2name',
+        ],
     ],
 
     // Optional custom scopes. You can create as many scopes as you want and assign claims to them.

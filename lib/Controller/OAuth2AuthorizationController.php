@@ -17,6 +17,7 @@ namespace SimpleSAML\Module\oidc\Controller;
 use CirrusIdentity\SSP\Utils\MetricLogger;
 use Exception;
 use League\OAuth2\Server\Exception\OAuthServerException;
+use SimpleSAML\Auth\ProcessingChain;
 use SimpleSAML\Error;
 use SimpleSAML\Error\BadRequest;
 use Psr\Http\Message\ResponseInterface;
@@ -68,9 +69,18 @@ class OAuth2AuthorizationController
     public function __invoke(ServerRequest $request): ResponseInterface
     {
         try {
-            $authorizationRequest = $this->authorizationServer->validateAuthorizationRequest($request);
+            $queryParameters = $request->getQueryParams();
+            $state = null;
 
-            $user = $this->authenticationService->getAuthenticateUser($request);
+            if (!isset($queryParameters[ProcessingChain::AUTHPARAM])) {
+                $authorizationRequest = $this->authorizationServer->validateAuthorizationRequest($request);
+                $state = $this->authenticationService->processRequest($request, $authorizationRequest);
+                // processState will trigger a redirect
+            }
+
+            $state ??= $this->authenticationService->manageState($queryParameters);
+            $authorizationRequest = $this->authenticationService->getAuthorizationRequestFromState($state);
+            $user = $this->authenticationService->getAuthenticateUser($state);
 
             $authorizationRequest->setUser($user);
             $authorizationRequest->setAuthorizationApproved(true);
