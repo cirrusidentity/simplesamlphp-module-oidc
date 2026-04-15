@@ -331,7 +331,7 @@ class AuthenticationService
             'entityid' => $state['Destination']['entityid'] ?? '',
         ];
 
-        $state['ReturnURL'] = $configurationService->getOpenIdConnectModuleURL('authorization');
+        $state['ReturnURL'] = $configurationService->getOpenIdConnectModuleURL('authorize.php');
         $state['Destination'] = $spMetadata;
         $state['Source'] = $idpMetadata;
 

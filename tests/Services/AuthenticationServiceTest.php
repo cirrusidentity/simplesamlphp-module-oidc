@@ -349,7 +349,7 @@ class AuthenticationServiceTest extends TestCase
                 'oid2name',
             ],
         ];
-        $returnUrl       = 'http://localhost/simplesaml/module.php/oidc/authorization';
+        $returnUrl       = 'http://localhost/simplesaml/module.php/oidc/authorize.php';
 
         $reflectedAuthService = new ReflectionClass('SimpleSAML\Module\oidc\Services\AuthenticationService');
         $runAuthProcs = $reflectedAuthService->getMethod('runAuthProcs');
@@ -359,7 +359,7 @@ class AuthenticationServiceTest extends TestCase
 
         $state = self::STATE;
         $runAuthProcs->invokeArgs($authService, [&$state]);
-        
+
         $this->assertEquals($returnUrl, $state['ReturnURL']);
         $this->assertEquals($authProcFilters, $state['Source']['authproc']);
     }
@@ -464,7 +464,7 @@ class AuthenticationServiceTest extends TestCase
      * @param string $exceptionMessage
      *
      * @dataProvider getUserState
-     * 
+     *
      * @throws \JsonException
      * @throws \SimpleSAML\Error\Exception
      * @throws \SimpleSAML\Error\NotFound
